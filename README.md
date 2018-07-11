@@ -23,5 +23,40 @@ cat abcde>>authorized_keys 注意，这里一定要使用>> 不能使用单个> 
 
 3.将ssh的公钥复制到远程机器时，尽然不能成功，还是要输密码，原来是我在vi打开文件后，没有进入insert模式，直接粘贴了，也奇怪，它竟然能复制成功，但是就是不可行，后来删除内容，再进入编辑模式后粘贴，保存， 成功了
 
+ubuntu安装nginx服务器：
+1.登录阿里云服务器
+2.下载nginx安装文件：
+ wget http://nginx.org/download/nginx-1.15.1.tar.gz
+ 解压：
+tar -zxvf nginx-1.15.1.tar.gz
+安装依赖
+
+sudo apt-get update
+sudo apt-get install openssl
+sudo apt-get install libssl-dev
+sudo apt-get install libpcre3-de
+进入解压后的文件夹：cd nginx-1.15.1
+执行：./configure --with-http_ssl_module (如果不带上--with-http_ssl_module则不支持https)
+编译：make
+安装: make install (如果有错误 有可能是全选问题 试试使用sudo make install执行)
+安装后的文件默认放在/usr/local/nginx/下面
+3.测试：
+sudo ./nginx -v 显示版本
+sudo ./nginx -t 测试
+sudo ./nginx -s reload 重新载入配置文件
+sudo ./nginx -s stop 停止
+sudo ./ngxin -s reopen 重启
+上面的命令中 执行reload stop reopen可能会报错：nginx: [error] invalid PID number "" in "/usr/local/nginx/logs/nginx.pid"，这时可以向nginx指定配置文件：$ sudo ./nginx -c /usr/local/etc/nginx/nginx.conf
+而执行上面的命令又有可能会出错（linxu经常是这样，一个错误未解决，另一个错误又出现了，心累）
+nginx: [emerg] listen() to 0.0.0.0:80, backlog 511 failed (98: Address already in use)
+端口被占用了（不出意外，应该是apache2占用了80端口，找到它并kill了它就ok了）
+netstat -atunp 找到80端口的进程 执行
+kill -9 pid杀死进程
+再执行上面的 sudo ./nginx -c /usr/local/etc/nginx/nginx.conf命令
+这时试试sudo ./nginx-s reload看看是不是正常启动了
+打开浏览器，在地址栏输入ip地址 如果看到Welcome to nginx!表示已经成功搭建好nginx服务器了，如果不能访问，则有可能是服务器的端口没有打开，这时需要到服务器管理后台添加安全组策略了，至于如何添加，这里就不多加描述了，可以自行百度。
+
+
+ 
 
 
