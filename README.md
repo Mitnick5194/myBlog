@@ -58,5 +58,152 @@ kill -9 pid杀死进程
 
 
  
+eclipse搭建maven和tomcat项目
+我们知道，在myeclipse上搭建一个web项目非常简单，因为myeclipse已经帮我们做好了大部分工作了，但是，如果在eclipse上搭建web项目，过程还是有点繁琐的，既然繁琐，为什么不直接使用myeclipse呢，当然
+是有原因的，myeclipse固然是好，但是它的缺点也很明显，首先，我们要知道，myeclipse是收费的，而eclipse是免费的，这个也是myeclipse最大的缺点，所以很多企业都不会使用myeclipse，而是直接使用免费的
+eclipse，其次，myeclipse集成了非常多的其他插件，很多插件我们根本就不需要用到，这就使得myeclipse显得非常臃肿，启动也非常慢。
+	上面大概的说了一下我们为什么需要使用eclipse的原因，接下来进入我们的主题，开始在eclipse搭建web项目，并整合spring
+注意，以下教程是在eclipse luna版本进行，不同版本的eclipse可能会有点不一样
+准备材料：apache-maven-3.5.4 下载地址：http://mirrors.hust.edu.cn/apache/maven/maven-3/3.5.4/source/apache-maven-3.5.4-src.zip
+apache-tomcat-7.0.53 下载地址：https://tomcat.apache.org/download-70.cgi
+1. 
+1.1 解压下载的maven，进入解压后的目录，找到conf文件夹，点击进入，编辑settings.xml文件，找到
+<localRepository>your repository path</localRepository>
+配置你的仓库路径，如果不配，则默认使用 ${user.home}/.m2/repository，其他节点可根据自己的需求进行配置
+
+1.2 解压tomcat到特定路径
+
+2. 打开eclipse，点击 window --> preferences -->下图
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/setting.png)
+
+3.配置tomcat：window --> preferences --> 下图：
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/tom1.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/tom2.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/tom3.png)
 
 
+4.创建maven项目：右击 --> new -->other -> maven project --> 下图
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/maven1.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/maven2.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/maven3.png)
+
+这时候创建好的项目并不能用于web开发。
+5.将项目转换成Dynamic Web Project项目：
+右击项目 --> properties --> 下图：
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/dy1.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/dy2.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/dy3.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/dy4.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/dy5.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/dy6.png)
+
+添加项目到服务器上：
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ser1.png)
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ser2.png)
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ser3.png)
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ser4.png)
+
+当我们看到了hello world 证明我们的项目已经跑起来了。
+6.整合spring：
+6.1 打开pom.xml 文件，在dependencies节点（如果没有，则创建）下面添加
+<!-- spring -->
+    <dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-webmvc</artifactId>
+		<version>2.5.6.SEC01</version>
+	</dependency>
+6.2 打开web.xml文件，tomcat启动时监听spring，添加如下配置：
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>/WEB-INF/spring.xml</param-value>
+	</context-param>
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
+	<!-- spring MVC -->
+	<servlet>
+		<servlet-name>springMVC</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+			<param-value>/WEB-INF/spring-mvc-conf.xml</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>springMVC</servlet-name>
+		<!-- 拦截所有以.do结束的请求 -->
+		<url-pattern>*.do</url-pattern>
+	</servlet-mapping>
+
+6.3 在WEB-INF文件夹下面创建spring.xml和spring-mvc.xml文件
+spring.xml暂时不注入任何东西，只加入必要的命名空间保证不报错就好了，
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+  http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+</beans>
+
+spring-mvc.xml按添加如下配置：
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- 基础业务模块配置文件 -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+  http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+  http://www.springframework.org/schema/context
+  http://www.springframework.org/schema/context/spring-context-2.5.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx-2.5.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop-2.5.xsd">
+	
+	
+	<!-- 添加前后缀 -->
+	<bean id="S-IRVR"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver"
+		p:prefix="/" p:suffix=".jsp" />
+	<!-- 规约所有进行扫描的类，使用依赖控制器类名字的惯例优先原则， 
+	将URI映射到控制器 如：“/xxx/index.do”对应“com.ajie.controller.XxxController.index()” -->
+	<context:component-scan base-package="com.ajie.controller" />
+
+	<bean id="S-CCHM"
+		class="org.springframework.web.servlet.mvc.support.ControllerClassNameHandlerMapping">
+		<property name="caseSensitive" value="false" />
+	</bean>
+	<!-- 除了惯例优先原则，以下是特例的URI及控制器映射 -->
+	<bean id="S-SUHM"
+		class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="mappings">
+			<value>
+			<!-- 添加一个测试controller -->
+			/test/hello/*.do=helloController
+			</value>
+		</property>
+	</bean>
+</beans>
+
+创建controller：
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/con1.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/con2.png)
