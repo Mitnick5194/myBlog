@@ -225,3 +225,10 @@ spring-mvc.xml按添加如下配置：
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ret1.png)
 
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ret2.png)
+
+右击项目 -->run as --> maven install 安装项目，这是会在仓库里找到该项目的war包，
+但是使用解压工具解压出来我们可以看到，此时打包的是src/main/webapp下面的web项目
+并不是我们的webapp；这时候需要更改pom文件
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/pom1.png)
+再次install，war包下面的文件就是我们指定的webapp下面的文件了
