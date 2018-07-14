@@ -196,7 +196,7 @@ spring-mvc.xml按添加如下配置：
 		<property name="mappings">
 			<value>
 			<!-- 添加一个测试controller -->
-			/test/hello/*.do=helloController
+			/myTestPro/hello/*.do=helloController
 			</value>
 		</property>
 	</bean>
@@ -207,3 +207,21 @@ spring-mvc.xml按添加如下配置：
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/con1.png)
 
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/con2.png)
+
+这时候再次启动tomcat，你会发现报错了，包java.lang.ClassNotFoundException: org.springframework.web.context.ContextLoaderListener竟然说抱不到类，不是已经在maven里导入了吗，这时候
+查看项目，你会发现，在项目的lib下面并没有maven导入的包，我们需要做以下的操作：
+右击项目 --> properites --> 下图：
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/lib.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/lib2.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/lib3.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/lib4.png)
+
+再次启动tomcat，发现一切正常，打开浏览器试试访问我们的控制器方法：
+熟悉的hello world再次呈现在我们的眼前
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ret1.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/ret2.png)
