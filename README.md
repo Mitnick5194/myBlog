@@ -232,3 +232,37 @@ spring-mvc.xml按添加如下配置：
 
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/pom1.png)
 再次install，war包下面的文件就是我们指定的webapp下面的文件了
+
+
+方法2：
+直接在pom里引入tomcat的maven插件，这个方法更便捷：
+创建一个maven项目，不用选择模板，直接新建一个simple maven项目:
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/m2new1.png)
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/m2new2.png)
+在pom.xml引入插件：
+<plugin>
+	<groupId>org.apache.tomcat.maven</groupId>
+	<artifactId>tomcat7-maven-plugin</artifactId>
+	<version>2.2</version>
+	<configuration>
+		<port>8080</port>
+		<path>/</path>
+	</configuration>
+</plugin>
+创建web.xml文件和首页文件
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/m2file1.png)
+
+运行项目：
+run as --> maven build -->命令 clean tomcat7:run
+注意，因为我们在插件中引入了的是tomcat7的插件，所以在运行的时候命令需要带上版本号，
+如果不带上版本号，那么默认是运行tomcat6
+测试install：
+如果你已经在spring-mvc-conf.xml里注入了控制器，那么安装的时候可能会报错，说找不到这个控制器的错误，
+这时候需要修改我们的class输出文件：
+右击项目 --> build path --> configure build path -->下图
+
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/m2path.png)
+到这里我们的tomcat就已经是安装成功并整合好spring了
