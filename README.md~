@@ -251,6 +251,22 @@ spring-mvc.xml按添加如下配置：
 		<path>/</path>
 	</configuration>
 </plugin>
+如果需要安装tomcat8插件，那么直接安装是不行的，这时候需要指定一个私服路径来下载插件包：
+ \<pluginRepositories> 
+	 \<pluginRepository\> 
+		\<id>alfresco-public\</id>    
+		\<url>https://artifacts.alfresco.com/nexus/content/groups/public\</url> 
+	  \</pluginRepository>
+ 	\</pluginRepositories>
+  
+  \<build>
+  	\<plugins>
+  		\<plugin>
+	          \<groupId>org.apache.tomcat.maven\</groupId>
+	         \<artifactId>tomcat8-maven-plugin\</artifactId>
+	          \<version>3.0-r1655215</version>
+  			\</plugin>
+  	\</plugins>
 创建web.xml文件和首页文件
 
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/m2file1.png)
@@ -266,3 +282,9 @@ run as --> maven build -->命令 clean tomcat7:run
 
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/m2path.png)
 到这里我们的tomcat就已经是安装成功并整合好spring了
+
+在spring整合mybatis时，遇到了一个很棘手的问题:
+查询的时候跑出了 一堆跟下面差不多的异常
+Servlet.service() for servlet [springMVC] in context with path [] threw exception [Request processing failed; nested exception is org.apache.ibatis.binding.BindingException: Invalid bound statement (not found): com.ajie.mapper.MemberMapper.selectByExample] with root cause
+java.lang.IllegalArgumentException: Mapped Statements collection does not contain value for com.ajie.mapper.MemberMapper.selectByExample
+
