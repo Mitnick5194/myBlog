@@ -252,21 +252,21 @@ spring-mvc.xml按添加如下配置：
 	</configuration>
 </plugin>
 如果需要安装tomcat8插件，那么直接安装是不行的，这时候需要指定一个私服路径来下载插件包：
- \<pluginRepositories> 
-	 \<pluginRepository\> 
-		\<id>alfresco-public\</id>    
-		\<url>https://artifacts.alfresco.com/nexus/content/groups/public\</url> 
-	  \</pluginRepository>
- 	\</pluginRepositories>
+ <pluginRepositories> 
+	 <pluginRepository> 
+		<id>alfresco-public</id>    
+		<url>https://artifacts.alfresco.com/nexus/content/groups/public</url> 
+	  </pluginRepository>
+ 	</pluginRepositories>
   
-  \<build>
-  	\<plugins>
-  		\<plugin>
-	          \<groupId>org.apache.tomcat.maven\</groupId>
-	         \<artifactId>tomcat8-maven-plugin\</artifactId>
-	          \<version>3.0-r1655215</version>
-  			\</plugin>
-  	\</plugins>
+  <build>
+  	<plugins>
+  		<plugin>
+	          <groupId>org.apache.tomcat.maven</groupId>
+	         <artifactId>tomcat8-maven-plugin</artifactId>
+	          <version>3.0-r1655215</version>
+  			</plugin>
+  	</plugins>
 创建web.xml文件和首页文件
 
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/m2file1.png)
@@ -289,7 +289,7 @@ Servlet.service() for servlet [springMVC] in context with path [] threw exceptio
 java.lang.IllegalArgumentException: Mapped Statements collection does not contain value for com.ajie.mapper.MemberMapper.selectByExample
 在网上找了一下相关的问题，很多人回答说是mapper生成的xml文件的权限命名可能和实际的不一样，我一想，感觉就是这个问题了，因为我用逆向工程生成的包的结构和当前项目的结构不一样，打开后发现过然不同，只好一个个改回来，再次运行，发现还是这个错误，这就很纳闷了，继续找资料，发现有和配置文件的打包也有关，在
 pom.xml中加入：
- 	<!-- <resources>
+ 	 <resources>
             <resource>
                 <directory>src/main/java</directory>
                 <includes>
@@ -298,10 +298,10 @@ pom.xml中加入：
                 </includes>
                 <filtering>false</filtering>
             </resource>
-        </resources>  -->
+        </resources> 
 
 加完之后发现又有新的问题了，spring找不到配置了，在看看上面的，加载配置找到是src/main/java（其实这里是为了把mybatis的打包加载进来），但是你配了这个路径，意味着你所有的配置都从这个文件夹里读取，所以在也找不到src/main/resource的配置文件了，那就把resource里的路径也加进去吧
- 	<!-- <resources>
+ 	 <resources>
             <resource>
                 <directory>src/main/java</directory>
                 <includes>
@@ -319,11 +319,6 @@ pom.xml中加入：
                 <filtering>false</filtering>
             </resource>
         </resources>  -->
+
  好像好使了，能正常跑起来，再次测试，一切ok
  
- 测试一下
- <dependency>
-	<groupId>org.springframework</groupId>
-	<artifactId>spring-webmvc</artifactId>
-	<version>2.5.6.SEC01</version>
-</dependency>
