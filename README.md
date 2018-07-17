@@ -320,3 +320,10 @@ pom.xml中加入：
             </resource>
         </resources>  -->
  好像好使了，能正常跑起来，再次测试，一切ok
+ 
+ 测试一下
+ <dependency>
+	<groupId>org.springframework</groupId>
+	<artifactId>spring-webmvc</artifactId>
+	<version>2.5.6.SEC01</version>
+</dependency>
