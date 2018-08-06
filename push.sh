@@ -1,11 +1,10 @@
 #! /bin/bash
 reason=$1
-echo "$reason"
 git add .
 if test -z $reason
 then
-	git commit -m "$reason"
+	git commit -m "脚本自动提交，无提交理由"
 else
-	git commit -m '脚本自动提交'
+	git commit -m $reason
 fi
 git push
