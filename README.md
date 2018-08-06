@@ -322,3 +322,29 @@ pom.xml中加入：
 
  好像好使了，能正常跑起来，再次测试，一切ok
  
+ 
+ JMX实现修改配置不用重启系统：
+ 一般系统的设计是，在系统启动的时候，通过spring把所有的配置文件读进内存，如果修改了配置文件，那么，必须得重启系统，下面介绍一种可以不需要重启系统实现更新配置。
+ 大概思路：系统启动时，将配置文件读进缓存中，以后，每次需要读取配置的数据，都是从缓存中读取，如果缓存中没有，则重新将配置文件读入内存。所以，这里需要有个方法，当配置文件修改了，则将缓存中的数据清空，再次读取的时候，发现会是空，则读取重新加载配置文件，吧最新的数据读入，达到更新的作用
+ 注意：JMX的命名规范必须是先定义一个接口，接口是以被管理的bean的名字+MBean，该接口的方法，就是暴露在jconsole工具的方法。
+ 
+ eclipse修改注释模板：
+ 修改新建java class时自动生成注释：
+ window --> preferences --> java --> code style --> code templates --> code --> new java files --> edit 在${package_declaration}（包）和${typecomment}（public class ...）之间加入你想要的注释，例：
+ 
+ ${filecomment}
+${package_declaration}
+
+/**
+* @author ajie
+*/
+${typecomment}
+${type_declaration}
+在类的前面打上/**回车后自动生成模板注释方法：
+window --> preferences --> java --> code style --> code templates --> comments --> Types --> edit 例:
+/**
+ * @author  ajie
+ *
+ * ${tags}
+ */
+
