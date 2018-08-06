@@ -354,3 +354,4 @@ window --> preferences --> java --> code style --> code templates --> comments -
 稍等片刻导出完成后，在eclipse中项目栏右击，选择import --> projects from git -->existing local repositoty --> add -->brower:找到你的项目导出的地址 -->next后选择import as general project
 --> next-->finash，这时候的项目eclipse并不知道是不是java项目，所以看起来会很奇怪，如果你的是maven项目，则右击项目--> configure --> covert to maven project 即可，如果是普通的java项目
 则可以：右击--> configure -->convert to faceted form -->勾选java，点击finish即可
+    
