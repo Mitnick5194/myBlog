@@ -358,3 +358,77 @@ window --> preferences --> java --> code style --> code templates --> comments -
 		InputStream in = url.openStream();
 这时候，我们的配置文件只要放在classes文件夹下面就可以加载进去了，如果是maven项目，那么我们只要吧配置文件放在src/main/resource下面，在安装时就会帮我们把配置文件打包到classes文件夹下面了
 
+eclipse项目上传到git：
+右击 --> team --> share project --> git --> Use or create repository it parent folder of project -->点击一下项目，下面的Create Repository会变成可点击状态-->点击Create Repository -->勾选项目 finish
+
+
+使用命令行克隆git后导入eclipse：
+首先复制github仓库的链接，在命令窗口中输入：git clone github仓库的地址
+稍等片刻导出完成后，在eclipse中项目栏右击，选择import --> projects from git -->existing local repositoty --> add -->brower:找到你的项目导出的地址 -->next后选择import as general project
+--> next-->finash，这时候的项目eclipse并不知道是不是java项目，所以看起来会很奇怪，如果你的是maven项目，则右击项目--> configure --> covert to maven project 即可，如果是普通的java项目
+则可以：右击--> configure -->convert to faceted form -->勾选java，点击finish即可
+
+maven打包项目源码：使用插件org.apache.maven.plugins
+<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<!--很奇怪 这里放开了 如果项目是jar类型的，项目会有红叉，注释了 又打包不成功/ -->
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	
+打包某个模块：
+	<plugin>
+		<artifactId>maven-jar-plugin</artifactId>
+		<executions>
+			<execution>
+				<id>user-module</id>
+				<goals>
+					<goal>jar</goal>
+				</goals>
+				<!--打包的后缀 -->
+				<phase>package</phase>
+				<!--life的多个阶段 ，预打包 -->
+				<configuration>
+					<outputDirectory>target/user</outputDirectory>
+					<classifier>user-module</classifier>
+					<includes>
+						<!--引入需要打包的文件的路径-->
+						<include>**/user/**</include>
+						<include>**/navigator/**</include>
+					</includes>
+				</configuration>
+			</execution>
+			<execution>
+				<id>all</id>
+				<goals>
+					<goal>jar</goal>
+				</goals>
+				<phase>package</phase>
+				<configuration>
+					<classifier>all</classifier>
+					***-all.jar
+					<excludes>
+						<!--排除 -->
+						<exclude>**/model/**</exclude>
+					</excludes>
+					<includes>
+						<!--引入-->
+						<include>**/impl/**</include>
+					</includes>
+				</configuration>
+			</execution>
+		</executions>
+	</plugin>
+
+    
