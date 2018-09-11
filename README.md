@@ -347,4 +347,17 @@ window --> preferences --> java --> code style --> code templates --> comments -
  *
  * ${tags}
  */
+ 
+ 关于System.getProperties("user.dir")的坑
+ 上面获取的路径很奇怪，并不是项目的路径，也不是tomcat的路径，而是你启动tomcat时候所在的路径，比如你是进入了tomcat的bin文件夹下使用./start.sh启动
+ tomcat的 那么上面获取的值就是你tomcat下的bin的绝对路径，如果你是在～目录下直接掉漆start.sh启动的 那么上面的值就是～，所以user.dir根本就不知一个绝对的值，可以铜鼓tomcat下面的catalina.sh修改，添加：
+ JAVA_OPTS="-Duser.dir=逆向指定的路径"，注意，在随便的地方添加，但不能在有if块里添加，因为你不知到这里的if是否会进入，还有，尽管catalina.sh里已经有了JAVA_OPTS,但这并不影响你多起一个，这不会冲突或替换
+ 通过修改tomcat的启动脚本我们可以修改user.dir的路径，但是又有个问题了，你修改的是全局的，以为这tomcat容器里的所有项目拿到的user.dir都是你指定的那个，这个一来不符合需求，二来也会带来安全性问题，所以user.dir在项目里能并不建议使用，当然，如果你的一个tomcat运行一个项目，这就特殊对待。如果不是一个项目，最好就是用当前线程的所在的路径加载进来：
+ 		ClassLoader loaderloader = Thread.currentThread().getContextClassLoader();
+		URL url = loader.getResource(xmlFileName);
+		InputStream in = url.openStream();
+这时候，我们的配置文件只要放在classes文件夹下面就可以加载进去了，如果是maven项目，那么我们只要吧配置文件放在src/main/resource下面，在安装时就会帮我们把配置文件打包到classes文件夹下面了
+
+eclipse项目上传到git：
+右击 --> team --> share project --> git --> Use or create repository it parent folder of project -->点击一下项目，下面的Create Repository会变成可点击状态-->点击Create Repository -->勾选项目 finish
 
