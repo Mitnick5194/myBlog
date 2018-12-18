@@ -613,6 +613,8 @@ remote my-server 1194 （这个是充电，my-server填写你自己的服务器�
 打开命令窗口，查看ip：
 ipconfig
 是否有一个和服务器tun0网卡同一网段的地址的ip，如果有，证明搭建成功，可以尝试ping一下，通了，则成功，不通，则查看日志；
-
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/ping.png)
+成功了，这里会变成绿色，且显示ip地址
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/success.png)
 注：
 阿里云ecs服务器端口需要自己手动配置打开，可以到阿里云官网控制台进行配置，具体请自行百度google
