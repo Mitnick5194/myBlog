@@ -432,4 +432,187 @@ maven打包项目源码：使用插件org.apache.maven.plugins
 		</executions>
 	</plugin>
 
+
+
+ubuntu16.04搭建openvpn
+OpenVPN是使用TLS/SSL协议的VPN。也就是说客户端和服务器之间的流量是加密的，所以搭建openvpn需要生成安全证书，具体步骤如下：
+
     
+
+1
+2
+$ sudo apt-get update
+$ sudo apt-get install openvpn easy-rsa
+到此为止，openvpn已经搭建完成，可以使用whereis openvpn查看相关路径
+构建CA(以下操作是在root权限下执行，如果是普通用户，需要sudo权限)
+进入openvpn路径：
+cd /etc/openvpn
+mkdir openvpn-ca
+root@aliyun:/etc/openvpn# cp -r /usr/share/easy-rsa/ /etc/openvpn/
+cd /etc/
+root@aliyun:/etc/openvpn# cd easy-rsa/
+vi vars
+修改：
+export KEY_COUNTRY="US"
+export KEY_PROVINCE="CA"
+export KEY_CITY="SanFrancisco"
+export KEY_ORG="Fort-Funston"
+export KEY_EMAIL="me@myhost.mydomain"
+export KEY_OU="MyOrganizationalUnit"
+在上面一段的下面有一个KEY_NAME，把值改为server：
+export KEY_NAME="server"
+值随意，但不能为空
+使生效
+root@aliyun:/etc/openvpn/easy-rsa# source vars
+NOTE: If you run ./clean-all, I will be doing a rm -rf on /etc/openvpn/easy-rsa/keys
+root@aliyun:/etc/openvpn/easy-rsa# 
+NOTE不用管
+root@aliyun:/etc/openvpn/easy-rsa# ./clean-all 
+root@aliyun:/etc/openvpn/easy-rsa# ./build-ca
+以下会提示再次输入配置里的内容，直接回车就行了
+Generating a 2048 bit RSA private key
+...................................+++
+...............................................................................................................................+++
+writing new private key to 'ca.key'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [CN]:
+State or Province Name (full name) [GD]:
+Locality Name (eg, city) [Guangzhou]:
+Organization Name (eg, company) [myorg]:
+Organizational Unit Name (eg, section) [MyOrganizationalUnit]:
+Common Name (eg, your name or your server's hostname) [myorg CA]:
+Name [server]:
+Email Address [xxx@qq.com]:
+生成服务端证书、密钥
+root@aliyun:/etc/openvpn/easy-rsa# ./build-key-server server(server是生成证书名，可随意取)
+下面也一样，一直回车，提示输入密码先不填，留空，遇到y/n，输入y
+Generating a 2048 bit RSA private key
+..............................................+++
+..................................................................................................+++
+writing new private key to 'server.key'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [CN]:
+State or Province Name (full name) [GD]:
+Locality Name (eg, city) [Guangzhou]:
+Organization Name (eg, company) [myorg]:
+Organizational Unit Name (eg, section) [MyOrganizationalUnit]:
+Common Name (eg, your name or your server's hostname) [server]:
+Name [server]:
+Email Address [xxx@qq.com]:
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+Using configuration from /etc/openvpn/easy-rsa/openssl-1.0.0.cnf
+Check that the request matches the signature
+Signature ok
+The Subject's Distinguished Name is as follows
+countryName           :PRINTABLE:'CN'
+stateOrProvinceName   :PRINTABLE:'GD'
+localityName          :PRINTABLE:'Guangzhou'
+organizationName      :PRINTABLE:'myorg'
+organizationalUnitName:PRINTABLE:'MyOrganizationalUnit'
+commonName            :PRINTABLE:'server'
+name                  :PRINTABLE:'server'
+emailAddress          :IA5STRING:'xxx@qq.com'
+Certificate is to be certified until Dec 15 13:10:40 2028 GMT (3650 days)
+Sign the certificate? [y/n]:y
+
+
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Data Base Updated
+root@aliyun:/etc/openvpn/easy-rsa#
+
+生成Diffie-Hellman key
+这里需要等到一段时间，也不会很久，十几到即使秒
+生成HMAC签名加强TLS认证：
+root@aliyun:/etc/openvpn/easy-rsa# openvpn --genkey --secret keys/ta.key
+到此为止，服务端的证书已经生成了，可以进入/etc/openvpn/easy-rsa/keys查看（需要root用户，或修改权限）
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/server-keys.png)
+生成客户端证书、密钥
+下面我为一个客户端生成证书，步骤和上面差不多，如果你有多个客户端可以重复这个过程，只要命名不重复就行了
+同样一直回车，密码空。
+./build-key client1
+
+把上面生成的证书复制到对应的OpenVPN目录：
+root@aliyun:/etc/openvpn/easy-rsa/keys# cp ca.crt ca.key server.crt server.key ta.key dh2048.pem /etc/openvpn/
+将安装文件里的实例配置复制到openvpn目录：
+root@aliyun:/etc/openvpn/easy-rsa/keys# cp  /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz  /etc/openvpn/
+解压：
+# gunzip -f server.conf.gz
+编辑配置文件：（该文件的注释是在前面加;去除注释吧;去掉就行了）
+vi server.conf
+#这里是证书，如果是其他命名，则需要修改为对应的文件名，如果证书和配置文件不是在同一个目录，则需要用绝对定位
+ca ca.crt
+cert server.crt
+key server.key  # This file should be kept secret
+
+# Diffie hellman parameters.
+去掉如下几行的注释：
+push "redirect-gateway def1 bypass-dhcp"
+push "dhcp-option DNS 208.67.222.222"
+push "dhcp-option DNS 208.67.220.220"
+user nobody
+group nogroup
+tls-auth ta.key 0 # This file is secret
+key-direction 0
+
+:wq保存
+6 打开IP转发
+$ sudo vim /etc/sysctl.conf
+去掉这行的注释，如果没有，则添加这行
+net.ipv4.ip_forward=1
+使生效：
+$ sudo sysctl -p
+启动OpenVPN服务
+sudo systemctl start openvpn@server
+查看启动状态：
+sudo systemctl status openvpn@server
+状态显示绿色的running表示正常启动了，如果有红色报错，则根据错误再排查
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/status.png)
+查看是否多了一个虚拟网卡tun0:
+ifconfig
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/tun0.png)
+到这里，openvpn已经搭建成功了
+
+下面演示window安装vpn客户端连接服务端
+下载openvpn windown版：
+https://openvpn.net/community-downloads/  （需翻墙）
+window相对简单很多，下载完成后，想普通软件一样安装，
+安装完成，进入安装目录，找到\sample-config，吧client.ovpn复制到config目录下
+吧服务端生成的客户端证书client1.crt、client1.key、ta.key、ca.crt复制到config目录
+编辑client.ovpn
+去除注释
+comp-lzo
+tls-auth ta.key 1
+ca ca.crt
+cert client1.crt
+key client1.key（证书路径，和服务器配置原理一样）
+remote my-server 1194 （这个是充电，my-server填写你自己的服务器公网ip）
+保存退出
+进入安装目录/bin/
+找到openvpn-gui.exe,点击运行，
+程序会在右下角出现，右击选择client，点击client，如果连接不上，可以右击选择选择setting，如下图，找到你对应的配置文件，重启即可
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/config.png)
+打开命令窗口，查看ip：
+ipconfig
+是否有一个和服务器tun0网卡同一网段的地址的ip，如果有，证明搭建成功，可以尝试ping一下，通了，则成功，不通，则查看日志；
+
+注：
+阿里云ecs服务器端口需要自己手动配置打开，可以到阿里云官网控制台进行配置，具体请自行百度google
