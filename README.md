@@ -55,9 +55,37 @@ kill -9 pid杀死进程
 再执行上面的 sudo ./nginx -c /usr/local/etc/nginx/nginx.conf命令
 这时试试sudo ./nginx-s reload看看是不是正常启动了
 打开浏览器，在地址栏输入ip地址 如果看到Welcome to nginx!表示已经成功搭建好nginx服务器了，如果不能访问，则有可能是服务器的端口没有打开，这时需要到服务器管理后台添加安全组策略了，至于如何添加，这里就不多加描述了，可以自行百度。
+搭建https:
+首先需要申请ssl证书，可以到阿里云申请免费的ssl证书
+进入阿里云控制台
 
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/https/product.png)
 
+点击购买证书
  
+ ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/https/buy.png)
+
+ 没有看到免费的，其实免费的入口有点隐蔽，不知是不是阿里云故意这样做的，需要点击选择品牌：Symantec、证书类型：增强型OV SSl，这时候，免费型DV SSL入口才会出现
+
+  ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/https/free.png)
+
+根据提示购买就ok了，遇到支付，直接点击支付，因为是免费的，所以点击完后会跳转到成功页面
+进入ssl证书控制台，会看到你刚才申请的证书，此时只是购买了，还没有完善信息，按照提示填写相关信息，提交审核，审核时间一般比较快，当审核通过，状态变成
+已签发状态就可以进行下载了，下载类型有很多，我们这里用到的是nginx，所以选择nginx
+
+  ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/https/dl.png)
+
+  下载的压缩包解压出来，里面有一个.pem和.key文件，把这两个文件上传到服务器，路径可以自定义，我是放在/usr/local/nginx/conf/cert/目录下（usrlocal/nginx是我的nginx安装
+  目录）
+
+  编辑nginx.conf文件
+
+  ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/https/conf.png)
+
+到此,nginx已经成功配置了ssl，重启服务：
+sudo ./nginx -s reload
+打开浏览器，使用https访问，如果能成功访问到nginx，则成功搭建https
+
 eclipse搭建maven和tomcat项目
 我们知道，在myeclipse上搭建一个web项目非常简单，因为myeclipse已经帮我们做好了大部分工作了，但是，如果在eclipse上搭建web项目，过程还是有点繁琐的，既然繁琐，为什么不直接使用myeclipse呢，当然
 是有原因的，myeclipse固然是好，但是它的缺点也很明显，首先，我们要知道，myeclipse是收费的，而eclipse是免费的，这个也是myeclipse最大的缺点，所以很多企业都不会使用myeclipse，而是直接使用免费的
@@ -618,3 +646,5 @@ ipconfig
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/success.png)
 注：
 阿里云ecs服务器端口需要自己手动配置打开，可以到阿里云官网控制台进行配置，具体请自行百度google
+
+搭建nginx+https
