@@ -572,7 +572,9 @@ root@aliyun:/etc/openvpn/easy-rsa#
 生成HMAC签名加强TLS认证：
 root@aliyun:/etc/openvpn/easy-rsa# openvpn --genkey --secret keys/ta.key
 到此为止，服务端的证书已经生成了，可以进入/etc/openvpn/easy-rsa/keys查看（需要root用户，或修改权限）
+
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/server-keys.png)
+
 生成客户端证书、密钥
 下面我为一个客户端生成证书，步骤和上面差不多，如果你有多个客户端可以重复这个过程，只要命名不重复就行了
 同样一直回车，密码空。
@@ -613,10 +615,14 @@ sudo systemctl start openvpn@server
 查看启动状态：
 sudo systemctl status openvpn@server
 状态显示绿色的running表示正常启动了，如果有红色报错，则根据错误再排查
+
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/status.png)
+
 查看是否多了一个虚拟网卡tun0:
 ifconfig
+
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/tun0.png)
+
 到这里，openvpn已经搭建成功了
 
 下面演示window安装vpn客户端连接服务端
@@ -624,7 +630,7 @@ ifconfig
 https://openvpn.net/community-downloads/  （需翻墙）
 window相对简单很多，下载完成后，想普通软件一样安装，
 安装完成，进入安装目录，找到\sample-config，吧client.ovpn复制到config目录下
-吧服务端生成的客户端证书client1.crt、client1.key、ta.key、ca.crt复制到config目录
+吧服务端生成的客户端证书client1.crt、client1.key、ta.key、ca.crt复制到c:/user/{user}/OpenVpn/config/client目录
 编辑client.ovpn
 去除注释
 comp-lzo
@@ -637,7 +643,12 @@ remote my-server 1194 （这个是充电，my-server填写你自己的服务器�
 进入安装目录/bin/
 找到openvpn-gui.exe,点击运行，
 程序会在右下角出现，右击选择client，点击client，如果连接不上，可以右击选择选择setting，如下图，找到你对应的配置文件，重启即可
+
 ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/openvpn/config.png)
+
+注：如果是使用外部ifconf路径（非c:/user/{user}/openvpn/config/client目录）则在打开的时候会弹窗提示
+There already exist a config file named '%s'. You cannot have multiple config files with the same name, even if they reside in diffrent folders.
+如果想要去除弹窗，那么配置文件和证书只能放在c:/user/{user}/OpenVpn/config/client目录了
 打开命令窗口，查看ip：
 ipconfig
 是否有一个和服务器tun0网卡同一网段的地址的ip，如果有，证明搭建成功，可以尝试ping一下，通了，则成功，不通，则查看日志；
@@ -647,4 +658,3 @@ ipconfig
 注：
 阿里云ecs服务器端口需要自己手动配置打开，可以到阿里云官网控制台进行配置，具体请自行百度google
 
-搭建nginx+https
