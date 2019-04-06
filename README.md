@@ -658,3 +658,342 @@ ipconfig
 注：
 阿里云ecs服务器端口需要自己手动配置打开，可以到阿里云官网控制台进行配置，具体请自行百度google
 
+编写自定义maven 插件
+创建一个普通的maven插件，其中artifactId为xxx-maven-plugin(约定俗成),但不能使用maven-xxx-plugin，因为apache规范规定此命名格式为apache所有，如果使用
+这种方式命名是侵权的。
+创建好项目后，打开pom文件，编译插件开发依赖如下两个包：
+<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-plugin-api</artifactId>
+			<version>3.0</version>
+		</dependency>
+
+		<!-- dependencies to annotations -->
+		<dependency>
+			<groupId>org.apache.maven.plugin-tools</groupId>
+			<artifactId>maven-plugin-annotations</artifactId>
+			<version>3.4</version>
+			<scope>provided</scope>
+		</dependency>
+编写第一个无参Mojo，这是最简单的Mojo
+package com.ajie.custom.maven.plugin.test;
+
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Mojo;
+
+/**
+ *
+ *
+ * @author niezhenjie
+ *
+ */
+
+@Mojo(name = "hello")
+public class Hello extends AbstractMojo {
+
+	public void execute() throws MojoExecutionException, MojoFailureException {
+		getLog().info("hello world");
+
+	}
+
+}
+
+每个Mojo必须继承AbstractMojo，声明周期可以通过 @Mojo注解指定；第一个Mojo基本上就算完成了，打开pom文件，在build节点添加：
+
+	<plugins>
+		<plugin>
+			<groupId>com.ajie</groupId>
+			<artifactId>custom-maven-plugin</artifactId>
+			<version>1.0.10</version>
+		</plugin>
+		...
+	</plugins>
+	...
+执行自定义Mojo，在项目的更目录使用命令
+mvn groupId:artifactId:version:goal
+如：com.ajie:custom-maven-plugin:1.0.10:hello
+如果是在eclipse执行，不用带mvn
+如不出意料，执行结果会报一下错误：
+Plugin com.ajie:custom-maven-plugin:1.0.10 or one of its dependencies could not be resolved: Could not find artifact com.ajie:custom-maven-plugin:jar:1.0.10 in central (http://repo.maven.apache.org/maven2) -> [Help 1]
+这是因为我们的pom文件没有指定packaging，在pom中添加
+ <packaging>maven-plugin</packaging>
+ 这里一定要是maven-plugin，不能使用其他，但是保存后发现pom文件在该节点位置报错，这应该是eclipse编译器无法识别问题，不用管，继续执行
+ 如不出意料，还会报错：
+ Plugin com.ajie:custom-maven-plugin:1.0.10 or one of its dependencies could not be resolved: Could not find artifact com.ajie:custom-maven-plugin:jar:1.0.10 in central (http://repo.maven.apache.org/maven2) -> [Help 1]
+ 提示很明显，仓库里找不到这个插件包，安装一下就可以了
+ mvn install
+ 安装完成后继续执行上述命令
+看到控制台成功打印出 hello world，第一个Mojo开发完成
+在其他项目里使用自定义的插件
+在需要使用的项目的pom文件里添加插件：
+<plugin>
+				<groupId>com.ajie</groupId>
+				<artifactId>custom-maven-plugin</artifactId>
+				<version>1.0.10</version>
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>hello</goal>
+						</goals>
+					</execution>
+				</executions>
+
+			</plugin>
+其中phase是该插件绑定的生命周期，goal是目标Mojo，这里指向的是我们编写的hello Mojo,运行项目
+mvn install
+如果控制台打印出了hello world，则表示插件引用成功，如果提示错误，可根据错误提示自己调试
+缩短命令：
+缩短命令有多中方法
+方法一：仓库只有一个版本，可以不带版本号，如果仓库有多个版本，也可以不带版本号，默认是使用最新的版本
+com.ajie:custom-maven-plugin:hello
+方法二：如果命名服务apache规范（xxx.maven-plugin)，则可以使用:
+custom:hello
+上述demo:
+package com.ajie.custom.maven.plugin.test;
+
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Mojo;
+
+/**
+ * 最简单的Mojo
+ * 
+ * Mojo就是 Maven plain Old Java Object。每一个 Mojo 就是 Maven 中的一个执行目标（executable
+ * goal），而插件则是对单个或多个相关的 Mojo 做统一分发。一个 Mojo 包含一个简单的 Java 类。插件中多个类似 Mojo
+ * 的通用之处可以使用抽象父类来封装
+ *
+ * @author niezhenjie
+ *
+ */
+
+@Mojo(name = "hello1")
+public class Hello extends AbstractMojo {
+
+	public void execute() throws MojoExecutionException, MojoFailureException {
+		//获取抽象父类的日志输出接口，打印日志到控制台
+		getLog().info("hello world");
+
+	}
+
+}
+
+pom.xml
+<build>
+		<plugins>
+			<plugin>
+				<groupId>com.ajie</groupId>
+				<artifactId>custom-maven-plugin</artifactId>
+				<version>1.0.10</version>
+			</plugin>
+		</plugins>
+	</build>
+注：每次修改了代码，都要执行mvn install安装到仓库才能执行
+编写带参Mojo
+编写带参数的Mojo其实也很方便，只要再Mojo里定义好属性并提供相应的set方法，使用注解@Paramter(property="xxx",default="xxx")即可
+在pom使用configuration节点传入参数，demo如下
+package com.ajie.custom.maven.plugin.test;
+
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+
+/**
+ * 测试传参
+ *
+ * @author niezhenjie
+ *
+ */
+
+@Mojo(name = "param")
+public class Paramters extends AbstractMojo {
+
+	//property对应pom的节点的属性，defaultValue是默认值，非必传
+	@Parameter(property = "name", defaultValue = "ajie")
+	private String name;
+
+	@Parameter(property = "greet", defaultValue = "hello")
+	private String greet;
+
+	public void execute() throws MojoExecutionException, MojoFailureException {
+		getLog().info(name + " say " + greet);
+
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getGreet() {
+		return greet;
+	}
+
+	public void setGreet(String greet) {
+		this.greet = greet;
+	}
+
+}
+
+pom.xml
+<build>
+		<plugins>
+			<plugin>
+				<groupId>com.ajie</groupId>
+				<artifactId>custom-maven-plugin</artifactId>
+				<version>1.0.10</version>
+				<configuration>
+					<name>aki</name>
+					<greet>hello world</greet>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+其中，属性支持基本数据类型和复合数据类型，详情请查看官方文档
+maven自定义插件官方文档写的很详细，有不懂的可以到官网查看文档说明：
+https://maven.apache.org/guides/plugin/guide-java-plugin-development.html
+
+ubuntu项目部署脚本，配置分离
+项目的配置文件一般在本机环境，本地环境和生产环境是有所差异的，如果使用传统的打包上传至tomcat目录重启tomcat的方式部署项目，则每次部署都回把
+配置文件覆盖掉，需要手动将它改回来，这样的部署方式非常低效且容易出现问题，所以在部署项目的时候一般采用的是配置分离。
+配置分离的实现方式有很多种，可以在打包阶段忽略配置文件，也可以配置tomcat读取外部配置，但我这里要跟大家介绍的是使用覆盖的方式达到一种配置分离的
+效果，基于shell脚本实现一键部署和快速回滚。
+以我的环境为例：
+tomcat HOME_PATH：/home/ajie/tomcat
+打包项目上传路径：/var/www/${project}/
+${project}代表你的项目名，每个项目独占一个文件夹，规范很重要，规范的操作能带来很多便捷的开发和维护
+项目配置文件的路径：/var/www/${project}/properties/
+部署项目shell脚本：/var/www/${project}/deploy.sh
+![image](https://github.com/Mitnick5194/myBlog/blob/master/images/web/path.png)
+图中.old文件在第一次部署时是没有的，第一次部署后，会存在，用作版本异常回滚使用，
+下面来介绍我们的主角，部署脚本deploy.sh，以一个名为resource的项目为例
+#/bin/bash
+NAME=resource
+UPLOAD_NAME=resource
+
+BASE_PATH=/var/www/$NAME
+TOMCAT_HOME=/home/ajie/tomcat
+USER_DIR=/var/www/$NAME/$UPLOAD_NAME
+TOMCAT_USER_DIR=$TOMCAT_HOME/webapps/$NAME
+TOMCAT_WEBAPPS=$TOMCAT_HOME/webapps
+
+#输出java环境变量，使用java代码远程调用命令执行本脚本，如果没有下面的输出，则会包找不到java_home和jre_home错误
+# jdk enviroment
+export JAVA_HOME=/home/ajie/java/jdk1.7.0_79
+export CLASSPATH=.:$JAVA_HOME/lib:$JAVA_HOME/jre/lib:$CLASSPATH
+export PATH=$JAVA_HOME/bin:$JAVA_HOME/jre/bin:$PATH
+
+
+#OPTION=stop对tomcat只关不开，start只开不关，move不关也不开，空执行传统的功能，关闭后移动再打开
+#option 可选项，空|start|stop|move|rollback
+#start 不进入关闭块，进入启动快
+#stop 不进入启动块，进入关闭块
+#move  既不进入启动块，也不进入关闭块
+#rollback 版本回滚，关闭启动都执行
+#空 既进入启动也进入关闭
+OPTION=$1 # start|stop|move|rollback
+echo $OPTION
+
+if [ "$OPTION" = "rollback" ] ; then
+	#回滚
+	echo "mv ${BASE_PATH}/${NAME}.old to ${BASE_PATH}/${NAME}"
+	mv  ${BASE_PATH}/${NAME}.old ${BASE_PATH}/${NAME} 
+
+fi
+#判断有没有上传文件
+if [ ! -d $USER_DIR ] ; then
+	#判断有没有war文件
+	if [ ! -f ${BASE_PATH}/${NAME}.war ] ; then
+		echo upload file  not exit
+		exit 1
+	else
+		#解压
+		echo 'unzip\c'
+		echo "${USER_DIR}"
+		unzip -d ${USER_DIR}/ ${BASE_PATH}/${NAME}.war
+		echo 'delete war'
+		rm ${BASE_PATH}/${NAME}.war
+	fi
+fi
+
+#删除旧的备份
+if [ -d $BASE_PATH/${NAME}.old ];then
+	rm -rf $BASE_PATH/${NAME}.old
+	echo deletting ${NAME}.old...
+fi
+
+#关闭tomcat 参数除了start和move不停止tomcat，其他情况都停止
+if [[ "$OPTION" !=  "start" ]] && [[ "$OPTION" != "move"  ]];then
+	$TOMCAT_HOME/bin/shutdown.sh
+	echo -e "shutdown tomcat .\c"
+	sleep 1 #等待6秒，等tomcat关闭
+	echo -e ".\c" 
+	sleep 1
+	echo -e ".\c"
+	sleep 1
+	echo -e ".\c"
+	sleep 1
+	echo -e ".\c"
+	sleep 1
+	echo -e  "."
+	sleep 1
+fi
+#将原来的项目打包备份，作版本异常回滚使用
+if [ -d  $TOMCAT_USER_DIR ];then
+	mv  $TOMCAT_USER_DIR $BASE_PATH/${NAME}.old
+	echo "moving $TOMCAT_USER_DIR to $BASE_PATH/${NAME}.old"
+
+	
+fi
+
+#将配置文件复制到项目中 如果项目中的配置有改变 那么需要手动在/var/www/项目名/properties/下面找到对应的配置进行修改
+# 进入配置文件夹
+cd $BASE_PATH/properties
+echo -e "into dir \c"
+pwd
+#for file in `ls $BASE_PATH/properties`
+for file in `ls`
+do
+    if test -d $file;then
+	     # 文件夹
+		 cp -rf $file $USER_DIR/WEB-INF/classes/
+	else
+		cp -f $file $USER_DIR/WEB-INF/classes/
+	fi
+	echo "coping $file to $USER_DIR/WEB-INF/classes"
+done
+
+#将上传的项目重命名
+#将项目移到tomcat下的webapps
+mv $BASE_PATH/$UPLOAD_NAME $TOMCAT_WEBAPPS/$NAME
+echo "moving $BASE_PATH/$NAME to  $TOMCAT_WEBAPPS/"
+
+#重启tomcat，除了stop和move时不启动tomcat，其他情况都启动
+if [[ "$OPTION" != "stop" ]] && [[ "$OPTION" != "move" ]];then
+	$TOMCAT_HOME/bin/startup.sh
+	echo "done"
+fi
+
+脚本的工作流程
+1、判断有没有上传待部署的项目，如果上传的是war包，则先解压，没有检测到上传的项目则退出
+2、删除上一个回滚备份文件xxx.old
+3、关闭tomcat服务器
+4、复制tomcat服务器的项目到/var/www/${project}/文件夹下，并命名为/var/www/${project}/${project}.old，做回滚使用
+5、将/var/www/${project}/properties/下面的配置复制（覆盖）到/var/www/${project/${上传的项目}下
+6、将项目复制到tomcat服务器
+7、重启tomcat
+如果增加或修改了配置文件，则需要在/var/www/${project}/properties找到对应的文件进行同步修改或添加
+脚本可接受一个参数，参数包括：
+start|stop|move|rollback
+start:在执行完成后启动tomcat
+stop: 在执行时关闭了tomcat，执行完成后不启动
+move：在执行时不会去关闭tomcat，执行完成后也不会去启动tomcat
+rollback：回滚版本
