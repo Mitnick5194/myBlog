@@ -1683,37 +1683,36 @@ final public class UploadUtil {
 
 使用：
 将本插件安装到本地仓库，在需要使用的项目的pom文件引入以下插件(使用时将>全部替换成>,<全部替换成<，这里为了是github显示做了处理)
-<build>
-	<plugins>
-		<plugin>
-			<groupId>com.ajie</groupId>
-			<artifactId>custom-maven-plugin</artifactId>
-			<version>1.0.10</version>
-			<executions>
-				<execution>
-					<goals>
-						<!--绑定的生命周期 -->
-						<goal>install</goal>
-					</goals>
-				</execution>
-			</executions>
-			<configuration>
-				<server>
-					<host>${服务器主机}</host>
-					<username>${登录的用户名}</username>
-					<password>${登录密码}</password>
-					<port>${端口}</port>
-					<isupload>${是否执行自动上传并部署 true|false defalut false}</isupload>
-				</server>
-			</configuration>
-		</plugin>
-	</plugins>
-</build>
+&lt;build&gt;
+	&lt;plugins&gt;
+		&lt;plugin&gt;
+			&lt;groupId&gt;com.ajie&lt;/groupId&gt;
+			&lt;artifactId&gt;custom-maven-plugin&lt;/artifactId&gt;
+			&lt;version&gt;1.0.10&lt;/version&gt;
+			&lt;executions&gt;
+				&lt;execution&gt;
+					&lt;goals&gt;
+						绑定的生命周期
+						&lt;goal&gt;install&lt;/goal&gt;
+					&lt;/goals&gt;
+				&lt;/execution&gt;
+			&lt;/executions&gt;
+			&lt;configuration&gt;
+				&lt;server&gt;
+					&lt;host&gt;服务器主机&lt;/host&gt;
+					&lt;username&gt;登录的用户名&lt;/username&gt;
+					&lt;password&gt;登录密码&lt;/password&gt;
+					&lt;port&gt;端口&lt;/port&gt;
+					&lt;isupload&gt;是否执行自动上传并部署 true|false defalut false&lt;/isupload&gt;
+				&lt;/server&gt;
+			&lt;/configuration&gt;
+		&lt;/plugin&gt;
+	&lt;/plugins&gt;
+&lt;/build&gt;
 其中，server信息的配置除上述以外，还可以使用
-<configuration>
-	<serverFile>相对于classpath的路径</serverFile>	
-</configuration>
+&lt;configuration&gt;
+	&lt;serverFile&gt;相对于classpath的路径&lt;/serverFile&gt;	
+&lt;/configuration&gt;
 但是，需要注意的是，serverFile指向的配置文件不是放在需要运行的项目，而是放在本插件的项目里
 运行插件：custom:package（debug模式：custom:package -X）
-
 
