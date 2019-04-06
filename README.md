@@ -997,3 +997,723 @@ start:在执行完成后启动tomcat
 stop: 在执行时关闭了tomcat，执行完成后不启动
 move：在执行时不会去关闭tomcat，执行完成后也不会去启动tomcat
 rollback：回滚版本
+
+<h1>开发自定义的maven插件，实现打包上传部署一键完成</h1>
+在阅读此文章之前，你需要对maven自定义开发有所了解，可以参考xxx TODO和一键部署的脚本XXX //TODO
+这篇文章其实就是对上述的两篇文章的一个结合，直接上代码：
+package com.ajie.custom.maven.plugin.build;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
+
+import com.ajie.custom.maven.plugin.vo.Server;
+
+/**
+ * 抽象的mojo
+ *
+ * @author niezhenjie
+ *
+ */
+public abstract class AbstractCustomMojo extends AbstractMojo {
+
+	public static final String MAVEN_HOME = "MAVEN_HOME";
+	/** 从配置文件中配置maven home目录 */
+	public static final String MAVEN_HOME_KEY = "maven.home";
+	/** 文件分隔符 */
+	public static final String SEPARATOR = File.separator;
+	/** maven命令 */
+	public static String MAVEN_CMD = "bin" + SEPARATOR + "mvn";
+	static {
+		String os = System.getProperty("os.name");
+		if (os.startsWith("win") || os.startsWith("Win")) {
+			MAVEN_CMD += ".bat";// window系统 bin/mvn.bat
+		}
+	}
+
+	public static final String TARGET_FOLDER = "target";
+
+	@Parameter(property = "project")
+	protected MavenProject project;
+	/** 服务器信息，和serverFile二选一，如果两个都配置，最终读取serverFile里的信息 */
+	@Parameter
+	protected Server server;
+	/**
+	 * 服务器信息配置文件路径，该配置文件只能读取custom-maven-plugin项目下面的，不能读取待打包项目的路径，
+	 * 使用相对classpath路径，和server二选一，如果两个都配置，最终读取server里的信息
+	 */
+	@Parameter
+	protected String serverFile;
+	/** user.dir */
+	private String userDir;
+	/** 打包后的文件目录 */
+	private String targetDir;
+	/** 打包后的项目路径 */
+	private String targetFilePath;
+	/** 项目名 */
+	private String projectName;
+	/** 类型名 jar、war.. */
+	private String projectType;
+
+	public String getMavenHome() {
+		/*// 启动时通过参数传入
+		String home = System.getProperty(MAVEN_HOME_KEY);
+		if (!StringUtils.isEmpty(home)) {
+			return home;
+		}*/
+		// pom文件中配置
+		String home = project.getProperties().getProperty(MAVEN_HOME_KEY);
+		if (null != home) {
+			return home;
+		}
+		// 环境变量
+		return System.getenv(MAVEN_HOME);
+	}
+
+	public String getMvn() throws MojoFailureException {
+		String mavenHome = getMavenHome();
+		if (null == mavenHome) {
+			getLog().error("缺少maven主目录");
+			throw new MojoFailureException("缺少maven主目录");
+		}
+		if (!mavenHome.endsWith(SEPARATOR)) {
+			mavenHome += SEPARATOR;
+		}
+		return mavenHome + MAVEN_CMD;
+	}
+
+	public String getProjectName() {
+		if (null != projectName) {
+			return projectName;
+		}
+		projectName = project.getArtifactId();
+		return projectName;
+	}
+
+	public String getPom() {
+		StringBuilder sb = new StringBuilder();
+		String userDir = getUserDir();
+		sb.append(userDir);
+		sb.append("pom.xml");
+		return sb.toString();
+	}
+
+	public void setProject(MavenProject project) {
+		this.project = project;
+	}
+
+	public MavenProject getProject() {
+		return project;
+	}
+
+	public void setServer(Server server) {
+		this.server = server;
+	}
+
+	/**
+	 * 项目目录，结束符为"/" ,因为在eclipse运行，所以user.dir始终指向项目路径
+	 * 
+	 * @return
+	 */
+	public String getUserDir() {
+		if (null != userDir) {
+			return userDir;
+		}
+		String userDir = System.getProperty("user.dir");
+		if (!userDir.endsWith(SEPARATOR)) {
+			userDir += SEPARATOR;
+		}
+		this.userDir = userDir;
+		return userDir;
+	}
+
+	public String getTargetDir() {
+		if (null != targetDir) {
+			return targetDir;
+		}
+		String userDir = getUserDir();
+		targetDir = userDir + TARGET_FOLDER;
+		return targetDir;
+	}
+
+	public String getTargetFilePath() {
+		if (null != targetFilePath)
+			return targetFilePath;
+		targetFilePath = getTargetDir() + SEPARATOR;
+		return targetFilePath;
+	}
+
+	public String getProjectType() {
+		if (null != projectType) {
+			return projectType;
+		}
+		projectType = project.getPackaging();
+		return projectType;
+	}
+
+	public Server getServer() throws MojoFailureException {
+		// 单例，不存在并发，不需要锁
+		if (null != server)
+			return server;
+		if (null == serverFile)
+			return server;
+		InputStream is = Thread.currentThread().getContextClassLoader()
+				.getResourceAsStream(serverFile);
+		if (null == is)
+			throw new MojoFailureException("找不到配置文件，serverFile=" + serverFile);
+		Properties prop = new Properties();
+		try {
+			prop.load(is);
+		} catch (IOException e) {
+			throw new MojoFailureException("无法加载配置文件，serverFile=" + serverFile, e);
+		}
+		String host = prop.getProperty("host");
+		String username = prop.getProperty("username");
+		String password = prop.getProperty("password");
+		String sPort = prop.getProperty("port");
+		String sIsupload = prop.getProperty("isupload");
+		if (null == host)
+			throw new MojoFailureException("主机为空，host=" + host);
+		if (null == username)
+			throw new MojoFailureException("用户名为空，username=" + username);
+		int port = 0;
+		try {
+			port = Integer.valueOf(sPort);
+		} catch (Exception e) {
+			getLog().warn("无法解析端口：" + sPort + "，使用默认端口代替port:" + port);
+			port = Server.DEFAULT_PORT;
+		}
+		boolean isUpload = false;
+		try {
+			isUpload = Boolean.valueOf(sIsupload);
+		} catch (Exception e) {
+			if ("true".equalsIgnoreCase(sIsupload))
+				isUpload = true;
+			else if ("false".equalsIgnoreCase(sIsupload))
+				isUpload = false;
+			else {
+				getLog().warn("无法判断是否上传，sIsupload：" + sIsupload + "，默认不上传");
+				isUpload = false;
+			}
+
+		}
+		Server server = new Server();
+		server.setHost(host);
+		server.setUserName(username);
+		server.setPassword(password);
+		server.setPort(port);
+		server.setIsUpload(isUpload);
+		return server;
+	}
+}
+
+
+
+package com.ajie.custom.maven.plugin.build;
+
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Mojo;
+
+import com.ajie.custom.maven.plugin.util.ExecuteUtil;
+import com.ajie.custom.maven.plugin.util.UploadUtil;
+import com.ajie.custom.maven.plugin.vo.Server;
+
+/*
+ * 自定义打包插件，打包完成可以自动上传服务器<br>
+ * pom配置：<br>
+ * <build>
+		<plugins>
+			<plugin>
+				<groupId>com.ajie</groupId>
+				<artifactId>custom-maven-plugin</artifactId>
+				<version>1.0.10</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>install</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<server>
+						<host>www.ajie.top</host>
+						<username>ajie</username>
+						<password>123</password>
+						<port>22</port>
+						<isupload>true</isupload>
+					</server>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+ *
+ * @author niezhenjie
+ *
+ */
+@Mojo(name = "package")
+public class PackageMojo extends AbstractCustomMojo {
+
+	public void execute() throws MojoExecutionException, MojoFailureException {
+		getLog().info("start package ...");
+		packageProject();
+	}
+
+	public void packageProject() throws MojoFailureException {
+		String mvn = getMvn();
+		String cmd = mvn + " package";
+		ExecuteUtil.execute(cmd, getLog());
+		getLog().info("package success");
+		Server server = null;
+		try {
+			server = getServer();
+		} catch (MojoFailureException e) {
+			getLog().error("package success but upload fail", e);
+			return;
+		}
+		if (null == server)
+			return;
+		if (!server.isUpload())
+			return;
+		getLog().info("start upload file to server");
+		if (getLog().isDebugEnabled()) {
+			getLog().debug(server.toString());
+		}
+		long start = System.currentTimeMillis();
+		UploadUtil.upload(getTargetFilePath(), getProjectName() + "." + getProjectType(), server,
+				getLog());
+		long end = System.currentTimeMillis();
+		getLog().info("upload success, time consuming: " + (end - start) / 1000 + "s");
+		getLog().info("exec remote deploy script");
+		start = System.currentTimeMillis();
+		ExecuteUtil.execute(getServer(), getProjectName(), getLog());
+		end = System.currentTimeMillis();
+		getLog().info(
+				"exec remote deploy script success,time consuming: " + (end - start) / 1000 + "s");
+		getLog().info("done");
+	}
+
+}
+
+package com.ajie.custom.maven.plugin.vo;
+
+/**
+ * 服务器信息
+ *
+ * @author niezhenjie
+ *
+ */
+public class Server {
+	/** 默认端口 */
+	public static final int DEFAULT_PORT = 22;
+	/** 默认上传的根目录 */
+	public static final String DEFAULT_UPLOAD_PATH = "/var/www/";
+	/** 主机地址 */
+	private String host;
+	/** 用户名 */
+	private String username;
+	/** 密码 */
+	private String password;
+	/** 端口 */
+	private int port;
+	/** 是否上传 */
+	private boolean isupload;
+	/** 上传至服务器路径，最终文件会上传至uploadpath+projectName路径 */
+	private String uploadBasePath;
+
+	public Server() {
+
+	}
+
+	public String getHost() {
+		return host;
+	}
+
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	public String getUserName() {
+		return username;
+	}
+
+	public void setUserName(String userName) {
+		this.username = userName;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	public static int getDefaultPort() {
+		return DEFAULT_PORT;
+	}
+
+	public void setIsUpload(boolean b) {
+		isupload = b;
+	}
+
+	public boolean isUpload() {
+		return isupload;
+	}
+
+	public void setUploadBasePath(String uploadpath) {
+		this.uploadBasePath = uploadpath;
+	}
+
+	/**
+	 * 获取上传文件至服务器的路径，路径结束符为/
+	 * 
+	 * @return
+	 */
+	public String getUploadBasePath() {
+		if (null == uploadBasePath)
+			uploadBasePath = DEFAULT_UPLOAD_PATH;
+		if (!uploadBasePath.endsWith("/")) {
+			uploadBasePath += "/";
+		}
+		return uploadBasePath;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("{host:").append(host).append(",");
+		sb.append("username:").append(username).append(",");
+		sb.append("isupload:").append(isupload).append(",");
+		sb.append("uploadBasePath:").append(uploadBasePath).append("}");
+		return sb.toString();
+	}
+
+}
+
+package com.ajie.custom.maven.plugin.util;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
+
+import com.ajie.custom.maven.plugin.vo.Server;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+
+/**
+ * 执行命令
+ *
+ * @author niezhenjie
+ *
+ */
+public final class ExecuteUtil {
+
+	private ExecuteUtil() {
+
+	}
+
+	/**
+	 * 执行mvn命令
+	 * 
+	 * @param cmd
+	 * @param log
+	 * @throws MojoFailureException
+	 */
+	public static void execute(String cmd, Log log) throws MojoFailureException {
+		InputStream is = null;
+		try {
+			Process process = Runtime.getRuntime().exec(cmd);
+			is = process.getInputStream();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				line = line.replace("[INFO]", ""); // 去除info标记，否则会有两个[INFO]
+				log.info(line);
+			}
+			int exitVal = process.waitFor();
+			if (0 != exitVal) {
+				// 有错误
+				BufferedReader error = new BufferedReader(new InputStreamReader(is));
+				line = null;
+				while ((line = error.readLine()) != null) {
+					log.error(line);
+				}
+			}
+		} catch (IOException e) {
+			throw new MojoFailureException("发布失败", e);
+		} catch (InterruptedException e) {
+			throw new MojoFailureException("发布失败", e);
+		} finally {
+			if (null != is) {
+				try {
+					is.close();
+				} catch (IOException e) {
+					// 忽略
+				}
+			}
+		}
+	}
+
+	public static void execute(Server server, String projectName, Log log)
+			throws MojoFailureException {
+		StringBuilder cmd = new StringBuilder();
+		cmd.append(server.getUploadBasePath());
+		cmd.append(projectName);
+		cmd.append("/");
+		cmd.append("deploy.sh");
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		InputStream in = null;
+		JSch jsch = new JSch();
+		String host = server.getHost();
+		String username = server.getUserName();
+		String password = server.getPassword();
+		int port = server.getPort();
+		// 我上传的路径结构时${basePath}/${projectName}/${fileName}
+		Session session = null;
+		ChannelExec channel = null;
+		try {
+			session = jsch.getSession(username, host, port);
+			session.setConfig("StrictHostKeyChecking", "no");
+			session.setPassword(password);
+			session.connect(30000);
+			channel = (ChannelExec) session.openChannel("exec");
+			channel.setInputStream(null);
+			channel.setErrStream(out);
+			channel.setCommand(cmd.toString());
+			in = channel.getInputStream();
+			channel.connect();
+			byte[] buf = new byte[1024];
+			while (true) { // 因为是异步的，数据不一定能及时获取到，所以需要轮询
+				while (in.available() > 0) {
+					in.read(buf);
+					out.write(buf);
+				}
+				if (channel.isClosed()) { // channel关闭了，但是还有数据在流中，继续读
+					if (in.available() > 0)
+						continue;
+					break;
+				}
+				Thread.sleep(10);
+			}
+			BufferedReader reader = new BufferedReader(new InputStreamReader(
+					new ByteArrayInputStream(out.toByteArray())));
+			if (log.isDebugEnabled()) {
+				String line = null;
+				while ((line = reader.readLine()) != null) {
+					log.info(new String(line.getBytes("utf-8"), "utf-8"));
+				}
+			}
+		} catch (Exception e) {
+			log.error("文件上传成功，执行脚本失败", e);
+		} finally {
+			try {
+				if (null != in)
+					in.close();
+				if (null != channel && channel.isConnected())
+					channel.disconnect();
+				if (null != session && session.isConnected())
+					session.disconnect();
+				out = null;
+			} catch (Exception e) {
+			}
+		}
+
+	}
+}
+
+package com.ajie.custom.maven.plugin.util;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.rmi.RemoteException;
+
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
+
+import com.ajie.custom.maven.plugin.vo.Server;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+
+/**
+ * 文件上传工具
+ *
+ * @author niezhenjie
+ *
+ */
+final public class UploadUtil {
+
+	private UploadUtil() {
+
+	}
+
+	/**
+	 * 文件上传,上传文件不能使文件夹，可以是war或jar（java io无法读取文件夹）
+	 * 
+	 * @param src
+	 *            需要上传的文件所在的目录
+	 * @param procectName
+	 *            项目名称，要带后缀，如blog.war
+	 * @param server
+	 *            服务器信息
+	 * @param log
+	 * @throws MojoFailureException
+	 */
+	public static void upload(String src, String fileName, Server server, Log log)
+			throws MojoFailureException {
+		if (null == src) {
+			throw new MojoFailureException("无上传目录,src=" + src);
+		}
+		if (fileName.indexOf(".") == -1) {
+			throw new MojoFailureException("无法上传文件夹,fileName=" + fileName);
+		}
+		src += fileName;
+		FileInputStream in = null;
+		OutputStream out = null;
+		try {
+			File file = new File(src);
+			in = new FileInputStream(file);
+			JSch jsch = new JSch();
+			String host = server.getHost();
+			String username = server.getUserName();
+			String password = server.getPassword();
+			int port = server.getPort();
+			String path = server.getUploadBasePath();
+			// 我上传的路径结构时${basePath}/${projectName}/${fileName}
+			String name = fileName.substring(0, fileName.lastIndexOf("."));
+			path += name + "/";
+			Session session = jsch.getSession(username, host, port);
+			session.setConfig("StrictHostKeyChecking", "no");
+			session.setPassword(password);
+			session.connect(30000);
+			Channel channel = session.openChannel("sftp");
+			ChannelSftp sftp = (ChannelSftp) channel;
+			sftp.connect(30000);
+			String folder = createFolders(path, sftp);
+			out = sftp.put(folder + fileName);
+			byte[] buf = new byte[1024];
+			int n = 0;
+			while ((n = in.read(buf)) != -1) {
+				out.write(buf, 0, n);
+			}
+			out.flush();
+			out.close();
+		} catch (Exception e) {
+			log.error("打包成功，上传失败", e);
+		} finally {
+			try {
+				if (null != in)
+					in.close();
+				if (null != out)
+					out.close();
+			} catch (IOException e) {
+			}
+		}
+	}
+
+	/**
+	 * 切割配置里的目录路径 basePath形式 如：/var/www/或var/www 不管哪种形式，都是绝对路径
+	 * 
+	 * @return
+	 * @throws RemoteException
+	 */
+	static private String createFolders(String path, ChannelSftp sftp) throws IOException {
+		if (path.startsWith("/")) {
+			path = path.substring(1);
+		}
+		String[] folders = path.split("/");
+		if (null == folders) {
+			folders = new String[0];
+		}
+		String cd = "";
+		// 进入目录，如果目录不存在，则创建目录
+		for (int i = 0; i < folders.length; i++) {
+			cd += "/" + folders[i];
+			boolean currErr = false;// 创建目录过程中出现了错误
+			Throwable e = null;
+			try {
+				sftp.cd(cd);
+			} catch (SftpException exce) {
+				// 没有则创建
+				try {
+					sftp.mkdir(cd);
+				} catch (SftpException e1) {
+					currErr = true;
+					e = e1;
+					break;
+				}
+			}
+			if (currErr) {
+				throw new IOException("无法创建目录 ", e);
+			}
+		}
+		// 结尾加上/如/var/www/
+		if (null != path) {
+			cd += "/";
+		}
+		return cd;
+	}
+}
+
+使用：
+将本插件安装到本地仓库，在需要使用的项目的pom文件引入以下插件(使用时将>全部替换成>,<全部替换成<，这里为了是github显示做了处理)
+<build>
+	<plugins>
+		<plugin>
+			<groupId>com.ajie</groupId>
+			<artifactId>custom-maven-plugin</artifactId>
+			<version>1.0.10</version>
+			<executions>
+				<execution>
+					<goals>
+						<!--绑定的生命周期 -->
+						<goal>install</goal>
+					</goals>
+				</execution>
+			</executions>
+			<configuration>
+				<server>
+					<host>${服务器主机}</host>
+					<username>${登录的用户名}</username>
+					<password>${登录密码}</password>
+					<port>${端口}</port>
+					<isupload>${是否执行自动上传并部署 true|false defalut false}</isupload>
+				</server>
+			</configuration>
+		</plugin>
+	</plugins>
+</build>
+其中，server信息的配置除上述以外，还可以使用
+<configuration>
+	<serverFile>相对于classpath的路径</serverFile>	
+</configuration>
+但是，需要注意的是，serverFile指向的配置文件不是放在需要运行的项目，而是放在本插件的项目里
+运行插件：custom:package（debug模式：custom:package -X）
+
+
