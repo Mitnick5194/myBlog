@@ -38,12 +38,12 @@ sudo apt-get install libpcre3-de
 进入解压后的文件夹：cd nginx-1.15.1
 执行：./configure --with-http_ssl_module (如果不带上--with-http_ssl_module则不支持https)
 编译：make
-安装: make install (如果有错误 有可能是全选问题 试试使用sudo make install执行)
+安装: make install (如果有错误 有可能是权限问题 试试使用sudo make install执行)
 安装后的文件默认放在/usr/local/nginx/下面
 3.测试：
 sudo ./nginx -v 显示版本
 sudo ./nginx -t 测试
-sudo ./nginx -s reload 重新载入配置文件
+sudo ./nginx -s reload 重新载入配置文件(记住，修改了配置文件需要重新载入，不能直接reopen)
 sudo ./nginx -s stop 停止
 sudo ./ngxin -s reopen 重启
 上面的命令中 执行reload stop reopen可能会报错：nginx: [error] invalid PID number "" in "/usr/local/nginx/logs/nginx.pid"，这时可以向nginx指定配置文件：$ sudo ./nginx -c /usr/local/etc/nginx/nginx.conf
@@ -82,7 +82,7 @@ kill -9 pid杀死进程
 
   ![image](https://github.com/Mitnick5194/myBlog/blob/master/images/https/conf.png)
 
-到此,nginx已经成功配置了ssl，重启服务：
+到此,nginx已经成功配置了ssl，重新载入配置文件并重启服务 ./nginx -s reload ./nginx -s reopen：
 sudo ./nginx -s reload
 打开浏览器，使用https访问，如果能成功访问到nginx，则成功搭建https
 
